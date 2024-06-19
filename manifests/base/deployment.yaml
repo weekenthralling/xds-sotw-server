@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xds-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: xds-server
+  template:
+    metadata:
+      labels:
+        app: xds-server
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+        - name: tablegpt
+          image: zjuici/xds-server:latest
+          envFrom:
+            - configMapRef:
+                name: xds-server-env
+          ports:
+            - containerPort: 18000
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
