@@ -1,0 +1,40 @@
+syntax = "proto3";
+package config;
+option go_package = "github.com/xds-sotw-server/proto";
+
+service ConfigService {
+  rpc SaveConfig(SaveConfigRequest) returns (SaveConfigResponse);
+  rpc ListConfig(ListConfigRequest) returns (ListConfigResponse);
+}
+
+message SaveConfigRequest {
+  string domain = 1;
+  string key = 2;
+  optional string value = 3;
+  int32 unit = 4;
+  int32 request_per_unit = 5;
+}
+
+message SaveConfigResponse {
+  bool success = 1;
+}
+
+message ListConfigRequest {}
+
+message ListConfigResponse {
+  repeated RateLimit rate_limit = 1;
+}
+
+message RateLimit {
+  string domain = 1;
+  string name = 2;
+  repeated RateLimitDescriptor descriptor = 3;
+}
+
+message RateLimitDescriptor {
+  string key = 1;
+  optional string value = 2;
+  optional int32 unit = 3;
+  optional int32 request_per_unit = 4;
+  repeated RateLimitDescriptor descriptor = 5;
+}

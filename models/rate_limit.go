@@ -17,10 +17,10 @@ type RateLimitDescriptor struct {
 	Key         string
 	Value       string `gorm:"default:null"`
 	// The time unit: SECOND, MINUTE, HOUR, DAY
-	Unit            int32  `gorm:"default:0"`
-	RequestsPerUnit uint32 `gorm:"default:null"`
+	Unit            int32 `gorm:"default:0"`
+	RequestsPerUnit int32 `gorm:"default:null"`
 	ShadowMode      bool
+	Descriptors     []RateLimitDescriptor `gorm:"foreignKey:ParentDescriptorID"`
 
 	ParentDescriptorID *uint
-	Descriptors        []RateLimitDescriptor `gorm:"foreignKey:ParentDescriptorID"`
 }
