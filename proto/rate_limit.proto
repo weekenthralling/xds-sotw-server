@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package config;
+
+option go_package = "./proto";
+
+service RateLimitService {
+  rpc ListRateLimit(ListRateLimitRequest) returns (ListRateLimitResponse);
+  rpc SaveRateLimitDescriptor(SaveDescriptorRequest) returns (SaveDescriptorResponse);
+}
+
+message ListRateLimitRequest {}
+
+message ListRateLimitResponse {
+  repeated RateLimit rate_limit = 1;
+}
+
+message RateLimit {
+  string domain = 1;
+  string name = 2;
+  repeated RateLimitDescriptor descriptor = 3;
+}
+
+message RateLimitDescriptor {
+  string key = 1;
+  optional string value = 2;
+  optional RateLimitPolicy policy = 3;
+}
+
+message RateLimitPolicy {
+  optional int32 unit = 1;
+  optional int32 request_per_unit = 2;
+}
+
+message SaveDescriptorRequest {
+  string domain = 1;
+  string key = 2;
+  optional string value = 3;
+  optional RateLimitPolicy policy = 4;
+}
+
+message SaveDescriptorResponse {
+  bool success = 1;
+}

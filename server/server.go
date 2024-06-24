@@ -26,53 +26,58 @@ const (
 	grpcMaxConcurrentStreams = 1000000
 )
 
-type ConfigServiceServer struct {
-	pb.UnimplementedConfigServiceServer
+type RateLimitServiceServer struct {
+	pb.UnimplementedRateLimitServiceServer
 	store                 *storage.RateLimitStore
 	configUpdateEventChan chan struct{}
 }
 
-// SaveConfig save rate limit descriptor
-func (c *ConfigServiceServer) SaveConfig(_ context.Context, in *pb.SaveConfigRequest) (*pb.SaveConfigResponse, error) {
+// SaveRateLimitDescriptor save rate limit descriptor
+func (c *RateLimitServiceServer) SaveRateLimitDescriptor(_ context.Context, in *pb.SaveDescriptorRequest) (*pb.SaveDescriptorResponse, error) {
 	rateLimit, err := c.store.GetRateLimitByDomain(in.Domain)
 	if err != nil {
 		log.Errorf("failed to get rate limit by domain %s: %v", in.Domain, err)
-		return &pb.SaveConfigResponse{Success: false}, err
+		return &pb.SaveDescriptorResponse{Success: false}, err
 	}
 
 	descriptor := &models.RateLimitDescriptor{
-		RateLimitId:     rateLimit.ID,
-		Key:             in.Key,
-		Value:           *in.Value,
-		Unit:            in.Unit,
-		RequestsPerUnit: in.GetRequestPerUnit(),
+		RateLimitId: rateLimit.ID,
+		Key:         in.Key,
+		Value:       *in.Value,
+		Policy: models.RateLimitPolicy{
+			Unit:            *in.Policy.Unit,
+			RequestsPerUnit: *in.Policy.RequestPerUnit,
+		},
+		ShadowMode: false,
 	}
 	if err := c.store.SaveRateLimitDescriptor(descriptor); err != nil {
 		log.Errorf("failed to save rate limit descriptor: %v", err)
-		return &pb.SaveConfigResponse{Success: false}, err
+		return &pb.SaveDescriptorResponse{Success: false}, err
 	}
 	c.configUpdateEventChan <- struct{}{}
-	return &pb.SaveConfigResponse{Success: true}, nil
+	return &pb.SaveDescriptorResponse{Success: true}, nil
 }
 
-func (c *ConfigServiceServer) ListConfig(_ context.Context, _ *pb.ListConfigRequest) (*pb.ListConfigResponse, error) {
+// ListRateLimit list all rate limit
+func (c *RateLimitServiceServer) ListRateLimit(_ context.Context, _ *pb.ListRateLimitRequest) (*pb.ListRateLimitResponse, error) {
 	rateLimits, err := c.store.ListRateLimit()
 	if err != nil {
 		log.Errorf("failed to list rate limits: %v", err)
 		return nil, err
 	}
 
-	var convert func(descriptors []models.RateLimitDescriptor) []*pb.RateLimitDescriptor
+	// TODO: support sub descriptors
 	// convert rate limit descriptor
-	convert = func(descriptors []models.RateLimitDescriptor) []*pb.RateLimitDescriptor {
+	convert := func(descriptors []models.RateLimitDescriptor) []*pb.RateLimitDescriptor {
 		_descriptors := make([]*pb.RateLimitDescriptor, 0, len(descriptors))
 		for _, descriptor := range descriptors {
 			_descriptors = append(_descriptors, &pb.RateLimitDescriptor{
-				Key:            descriptor.Key,
-				Value:          &descriptor.Value,
-				Unit:           &descriptor.Unit,
-				RequestPerUnit: &descriptor.RequestsPerUnit,
-				Descriptor_:    convert(descriptor.Descriptors),
+				Key:   descriptor.Key,
+				Value: &descriptor.Value,
+				Policy: &pb.RateLimitPolicy{
+					Unit:           &descriptor.Policy.Unit,
+					RequestPerUnit: &descriptor.Policy.RequestsPerUnit,
+				},
 			})
 		}
 		return _descriptors
@@ -86,7 +91,7 @@ func (c *ConfigServiceServer) ListConfig(_ context.Context, _ *pb.ListConfigRequ
 		})
 	}
 
-	return &pb.ListConfigResponse{RateLimit: rls}, nil
+	return &pb.ListRateLimitResponse{RateLimit: rls}, nil
 }
 
 // RunServer starts an xDS server at the given port.
@@ -108,7 +113,7 @@ func RunServer(_ context.Context, srv server.Server, resource *resources.Resourc
 		log.Fatal(err)
 	}
 
-	pb.RegisterConfigServiceServer(grpcServer, &ConfigServiceServer{
+	pb.RegisterRateLimitServiceServer(grpcServer, &RateLimitServiceServer{
 		store:                 resource.RateLimitStore,
 		configUpdateEventChan: resource.ConfigUpdateEventChan,
 	})

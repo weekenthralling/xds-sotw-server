@@ -106,11 +106,12 @@ func convertDescriptors(descriptors []models.RateLimitDescriptor) []*rlsconfig.R
 			Key:   descriptor.Key,
 			Value: descriptor.Value,
 			RateLimit: &rlsconfig.RateLimitPolicy{
-				Unit:            rlsconfig.RateLimitUnit(descriptor.Unit),
-				RequestsPerUnit: uint32(descriptor.RequestsPerUnit),
+				Unit:            rlsconfig.RateLimitUnit(descriptor.Policy.Unit),
+				RequestsPerUnit: uint32(descriptor.Policy.RequestsPerUnit),
 			},
-			ShadowMode:  descriptor.ShadowMode,
-			Descriptors: convertDescriptors(descriptor.Descriptors),
+			ShadowMode: descriptor.ShadowMode,
+			// TODO: support sub descriptors
+			// Descriptors: convertDescriptors(descriptor.Descriptors),
 		}
 		envoyDescriptors = append(envoyDescriptors, envoyDescriptor)
 	}
