@@ -47,18 +47,21 @@ func (s *RateLimitStore) SaveRateLimitDescriptor(descriptor *models.RateLimitDes
 	if descriptor.Value != "" {
 		query = query.Where("value = ?", descriptor.Value)
 	}
-	var selected models.RateLimitDescriptor
-	err := query.First(&selected).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+
+	var descriptors []models.RateLimitDescriptor
+	if err := query.Find(descriptors).Error; err != nil {
 		return err
 	}
 
-	// create if descriptor not exist
-	if err == gorm.ErrRecordNotFound {
-		return s.db.Create(descriptor).Error
+	// find descriptor from descriptorList and update
+	for _, instance := range descriptors {
+		if instance.Policy.Unit == descriptor.Policy.Unit {
+			// update if exist
+			descriptor.ID = instance.ID
+			return s.db.Save(descriptor).Error
+		}
 	}
 
-	// update if exist
-	descriptor.ID = selected.ID
-	return s.db.Save(descriptor).Error
+	// create new one if not found
+	return s.db.Create(descriptor).Error
 }
